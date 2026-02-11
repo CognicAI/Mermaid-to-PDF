@@ -1123,7 +1123,7 @@ For issues or questions:
 ### Processing Commands
 
 | Task | Command |
-|------|---------||
+|------|---------|
 | **Setup** | `./setup.sh` (Mac/Linux) or `setup.bat` (Windows) |
 | **Build** | `make build` |
 | **Test** | `make test` |
@@ -1136,7 +1136,7 @@ For issues or questions:
 ### Stop & Cleanup Commands
 
 | Task | Command |
-|------|---------||
+|------|---------|
 | **Stop container** | `docker stop <container_id>` |
 | **Stop all containers** | `docker stop $(docker ps -q)` |
 | **Kill stuck container** | `docker kill <container_id>` |

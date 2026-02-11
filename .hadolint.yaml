@@ -1,0 +1,27 @@
+# Hadolint configuration for Dockerfile linting
+# https://github.com/hadolint/hadolint
+
+# Ignore specific rules
+ignored:
+  # DL3008: Pin versions in apt-get install
+  # Reason: Ubuntu package versions change frequently and pinning can break builds
+  # We use Ubuntu LTS with tested package combinations
+  - DL3008
+  
+# Set failure threshold
+failure-threshold: warning
+
+# Trusted registries (optional)
+# trustedRegistries:
+#   - docker.io
+
+# Override rule severities (optional)
+# override:
+#   error:
+#     - DL3001
+#   warning:
+#     - DL3042
+#   info:
+#     - DL3033
+#   style:
+#     - DL3015
