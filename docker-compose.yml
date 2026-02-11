@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  docs-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: docs-pipeline
+    volumes:
+      # Mount current directory for input files
+      - ./:/app/input:ro
+      # Mount output directory
+      - ./output:/app/output
+    working_dir: /app
+    environment:
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+    command: python3 main.py /app/input/README.md
+    
+    # Uncomment below to process all .md files in current directory
+    # command: python3 main.py /app/input
+
+    # Or override with:
+    # docker-compose run docs-pipeline python3 main.py /app/input/your-file.md

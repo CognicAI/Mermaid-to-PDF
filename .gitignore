@@ -1,0 +1,43 @@
+# Output directories (keep structure, ignore contents)
+output/markdown/*
+!output/markdown/.gitkeep
+output/pdf/*
+!output/pdf/.gitkeep
+output/temp/*
+!output/temp/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Environment files
+.env
+
+# Temporary files
+*.tmp
+*.bak
+.cache/

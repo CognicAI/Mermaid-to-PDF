@@ -1,0 +1,44 @@
+# Docker Compose override for local development
+# This file is automatically merged with docker-compose.yml
+# Copy to docker-compose.override.yml and customize as needed
+
+version: '3.8'
+
+services:
+  docs-pipeline:
+    # Override volumes for custom paths
+    volumes:
+      # Option 1: Use current directory (default)
+      - ./:/app/input:ro
+      - ./output:/app/output
+      
+      # Option 2: Use custom absolute path (uncomment and modify)
+      # macOS/Linux example:
+      # - /Users/username/Documents/my-docs:/app/input:ro
+      # - ./output:/app/output
+      
+      # Windows example:
+      # - C:\\Users\\username\\Documents\\my-docs:/app/input:ro
+      # - ./output:/app/output
+      
+      # Another example:
+      # - /Users/harshavardhan/Documents/GitHub/SequelSpeak/temp/Reports:/app/input:ro
+      # - ./output:/app/output
+    
+    # Override working directory if needed
+    # working_dir: /app
+    
+    # Add environment variables
+    environment:
+      - DEBUG=false
+    
+    # Override command for custom usage
+    # Process all files in input directory:
+    # command: python3 main.py /app/input
+    
+    # Process specific file:
+    # command: python3 main.py /app/input/README.md
+    
+    # Enable stdin/tty for interactive use
+    # stdin_open: true
+    # tty: true

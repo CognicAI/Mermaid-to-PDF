@@ -1,0 +1,117 @@
+% ── Enhanced LaTeX styling for pandoc + xelatex ──────────────────────
+% Makes the PDF body look closer to rendered markdown while preserving
+% full LaTeX features (title page, headers, footers, TOC, etc.)
+
+% ── Suppress pandoc auto-title (titlepage block is used instead) ──────
+\renewcommand{\maketitle}{}
+
+% ── Headers & Footers ─────────────────────────────────────
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\setlength{\headheight}{36pt}   % Important when logo > 24pt
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+% \logopath must be defined before this file is loaded (via a prior -H include)
+\fancyhead[L]{\includegraphics[height=32pt]{\logopath}}
+\fancyhead[R]{Architecture Document}
+\fancyfoot[C]{\thepage}
+\pagestyle{fancy}
+% Apply same style to 'plain' pages (TOC, title transitions)
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0pt}
+  \fancyhead[L]{\includegraphics[height=32pt]{\logopath}}
+  \fancyhead[R]{Architecture Document}
+  \fancyfoot[C]{\thepage}
+}
+
+% ── Colors ────────────────────────────────────────────────────────────
+\usepackage{xcolor}
+\definecolor{headingblue}{HTML}{0366d6}
+\definecolor{codebg}{HTML}{f6f8fa}
+\definecolor{blockquotegray}{HTML}{6a737d}
+\definecolor{blockquoteborder}{HTML}{dfe2e5}
+\definecolor{linkblue}{HTML}{0366d6}
+
+% ── Hyperlinks ────────────────────────────────────────────────────────
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=headingblue,
+  urlcolor=linkblue,
+  citecolor=headingblue,
+}
+
+% ── Headings ──────────────────────────────────────────────────────────
+\usepackage{titlesec}
+\titleformat{\section}
+  {\LARGE\bfseries\color{headingblue}}{\thesection}{1em}{}[\vspace{2pt}\titlerule]
+\titleformat{\subsection}
+  {\Large\bfseries\color{headingblue}}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\large\bfseries\color{headingblue}}{\thesubsubsection}{1em}{}
+\titleformat{\paragraph}[block]
+  {\normalsize\bfseries\color{headingblue}}{\theparagraph}{0em}{}
+\titleformat{\subparagraph}[block]
+  {\normalsize\bfseries\color{headingblue}}{\thesubparagraph}{0em}{}
+
+% Spacing: {left}{before}{after}[right]
+\titlespacing*{\section}{0pt}{24pt plus 4pt minus 2pt}{12pt plus 2pt minus 2pt}
+\titlespacing*{\subsection}{0pt}{20pt plus 4pt minus 2pt}{10pt plus 2pt minus 2pt}
+\titlespacing*{\subsubsection}{0pt}{16pt plus 4pt minus 2pt}{8pt plus 2pt minus 2pt}
+\titlespacing*{\paragraph}{0pt}{14pt plus 2pt minus 1pt}{8pt plus 2pt minus 1pt}
+\titlespacing*{\subparagraph}{0pt}{12pt plus 2pt minus 1pt}{6pt plus 1pt minus 1pt}
+
+% ── Code blocks (simple framed background) ────────────────────────────
+% Override the Shaded environment that pandoc generates
+\usepackage{framed}
+\definecolor{shadecolor}{HTML}{f6f8fa}
+
+% ── Blockquotes ───────────────────────────────────────────────────────
+\usepackage{mdframed}
+\renewenvironment{quote}{%
+  \begin{mdframed}[
+    linewidth=3pt,
+    linecolor=blockquoteborder,
+    leftline=true,
+    rightline=false,
+    topline=false,
+    bottomline=false,
+    leftmargin=0pt,
+    innerleftmargin=12pt,
+    innerrightmargin=12pt,
+    innertopmargin=8pt,
+    innerbottommargin=8pt,
+    skipabove=12pt,
+    skipbelow=12pt,
+  ]\color{blockquotegray}
+}{%
+  \end{mdframed}
+}
+
+% ── Tables (booktabs-like) ────────────────────────────────────────────
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+% Allow line breaks inside table cells for long content
+\usepackage{tabularx}
+
+% ── Images ────────────────────────────────────────────────────────────
+\usepackage{float}
+\floatplacement{figure}{H}
+
+% ── Lists – tighter spacing ──────────────────────────────────────────
+\usepackage{enumitem}
+\setlist{itemsep=2pt, parsep=2pt, topsep=4pt}
+
+% ── Misc ──────────────────────────────────────────────────────────────
+\usepackage{parskip}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{10pt plus 3pt minus 2pt}
+
+% ── TOC spacing ───────────────────────────────────────────────────────
+% Add vertical space before each top-level section in the TOC
+\usepackage{tocloft}
+\setlength{\cftbeforesecskip}{6pt plus 2pt minus 1pt}
+\setlength{\cftbeforesubsecskip}{2pt plus 1pt minus 0pt}
+\setlength{\cftbeforesubsubsecskip}{1pt plus 1pt minus 0pt}

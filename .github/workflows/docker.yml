@@ -1,0 +1,76 @@
+name: Docker Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: docs-pipeline:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Create output directories
+        run: |
+          mkdir -p output/markdown output/pdf output/temp
+      
+      - name: Test with README.md
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/app/input:ro \
+            -v ${{ github.workspace }}/output:/app/output \
+            docs-pipeline:latest python3 main.py /app/input/README.md
+      
+      - name: Verify PDF generation
+        run: |
+          if [ ! -f output/pdf/README.pdf ]; then
+            echo "ERROR: PDF was not generated"
+            exit 1
+          fi
+          echo "✅ PDF generated successfully"
+          ls -lh output/pdf/
+      
+      - name: Upload PDF artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-pdfs
+          path: output/pdf/*.pdf
+          retention-days: 30
+      
+      - name: Upload markdown artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: processed-markdown
+          path: output/markdown/*.md
+          retention-days: 30
+
+  lint-dockerfile:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
