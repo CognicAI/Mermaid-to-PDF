@@ -8,6 +8,16 @@ ignored:
   # We use Ubuntu LTS with tested package combinations
   - DL3008
   
+  # DL4001: Either use Wget or Curl but not both
+  # Reason: curl is required for NodeSource setup script, wget for downloading fonts
+  # Different tools serve different purposes in our build
+  - DL4001
+  
+  # DL3059: Multiple consecutive RUN instructions
+  # Reason: Separate RUN commands for clarity and better layer caching
+  # Font installation steps are kept separate for maintainability
+  - DL3059
+
 # Set failure threshold
 failure-threshold: warning
 
