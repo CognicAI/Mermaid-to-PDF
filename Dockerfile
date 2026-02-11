@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     texlive-fonts-recommended \
     texlive-latex-extra \
     texlive-latex-recommended \
+    lmodern \
     # Chromium for Mermaid rendering
     chromium-browser \
     # Font utilities
