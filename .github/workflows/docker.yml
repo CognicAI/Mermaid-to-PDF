@@ -24,9 +24,22 @@ jobs:
           context: .
           file: ./Dockerfile
           push: false
+          load: true
           tags: docs-pipeline:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      
+      - name: Verify Docker image
+        run: |
+          echo "Checking if Docker image was built..."
+          docker images | grep docs-pipeline
+          if [ $? -ne 0 ]; then
+            echo "ERROR: docs-pipeline image not found"
+            echo "Available images:"
+            docker images
+            exit 1
+          fi
+          echo "✅ Docker image verified"
       
       - name: Create output directories
         run: |
@@ -61,6 +74,95 @@ jobs:
           name: processed-markdown
           path: output/markdown/*.md
           retention-days: 30
+      
+      - name: Generate job summary
+        if: always()
+        run: |
+          echo "## 📊 Build & Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f output/pdf/README.pdf ]; then
+            echo "✅ **Status**: Success" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Generated Files" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            ls -lh output/pdf/ >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Status**: Failed - PDF not generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  test-custom-paths:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: docs-pipeline:latest
+          cache-from: type=gha
+      
+      - name: Create test directory structure
+        run: |
+          mkdir -p /tmp/test-docs/markdown
+          mkdir -p output/markdown output/pdf output/temp
+          
+          # Create a test markdown file
+          cat > /tmp/test-docs/markdown/test-doc.md << 'EOF'
+          # Test Document
+          
+          This is a test document for custom path processing.
+          
+          ## Features
+          
+          - Custom path support
+          - CI/CD integration
+          - Automated testing
+          
+          ## Code Example
+          
+          \`\`\`python
+          def hello():
+              print("Hello from custom path!")
+          \`\`\`
+          EOF
+          
+          echo "✅ Test files created"
+          ls -la /tmp/test-docs/markdown/
+      
+      - name: Test custom path processing
+        run: |
+          echo "Testing custom path: /tmp/test-docs/markdown"
+          docker run --rm \
+            -v /tmp/test-docs/markdown:/app/input:ro \
+            -v ${{ github.workspace }}/output:/app/output \
+            docs-pipeline:latest python3 main.py /app/input/test-doc.md
+      
+      - name: Verify custom path output
+        run: |
+          if [ ! -f output/pdf/test-doc.pdf ]; then
+            echo "ERROR: Custom path test failed - PDF not generated"
+            exit 1
+          fi
+          echo "✅ Custom path test passed"
+          ls -lh output/pdf/test-doc.pdf
+      
+      - name: Upload custom path test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-path-test-pdfs
+          path: output/pdf/test-doc.pdf
+          retention-days: 7
 
   lint-dockerfile:
     runs-on: ubuntu-latest

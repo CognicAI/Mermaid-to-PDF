@@ -996,6 +996,105 @@ The TOC depth is set to 3 levels. To change it, edit [scripts/main.py](scripts/m
 "--toc-depth=3",  # Change to your preferred depth (1-5)
 ```
 
+## CI/CD Integration
+
+### GitHub Actions
+
+The repository includes automated workflows for building and testing:
+
+**Workflow Features:**
+- ✅ Automatic Docker image build on push
+- ✅ Basic functionality testing with README.md
+- ✅ Custom path functionality testing
+- ✅ Dockerfile linting with Hadolint
+- ✅ Artifact uploads (PDFs retained for 30 days)
+- ✅ Build caching for faster runs
+
+**Workflow Configuration:** [`.github/workflows/docker.yml`](.github/workflows/docker.yml)
+
+**Key Fix for CI/CD:**
+The workflow uses `load: true` in the Docker build action to ensure the image is available:
+```yaml
+- name: Build Docker image
+  uses: docker/build-push-action@v5
+  with:
+    load: true  # Critical for local image usage
+    tags: docs-pipeline:latest
+```
+
+**View Workflow Results:**
+- Go to repository → Actions tab
+- Download generated PDFs from artifacts
+- Review job summaries for build status
+
+### Integration with Your Projects
+
+Add this pipeline to your project's CI/CD:
+
+```yaml
+# .github/workflows/docs-pipeline.yml
+name: Generate Documentation
+
+on:
+  push:
+    paths:
+      - 'docs/**/*.md'
+  workflow_dispatch:
+
+jobs:
+  generate-pdfs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Checkout docs-pipeline
+        uses: actions/checkout@v4
+        with:
+          repository: your-org/docs-pipeline
+          path: pipeline
+      
+      - name: Build pipeline image
+        run: |
+          cd pipeline
+          docker build -t docs-pipeline:latest .
+      
+      - name: Generate PDFs
+        run: |
+          cd pipeline
+          docker run --rm \
+            -v ${{ github.workspace }}/docs:/app/input:ro \
+            -v ${{ github.workspace }}/output:/app/output \
+            docs-pipeline:latest python3 main.py /app/input
+      
+      - name: Upload PDFs
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-pdfs
+          path: output/pdf/*.pdf
+```
+
+**For detailed CI/CD setup and troubleshooting**, see [`.github/workflows/README.md`](.github/workflows/README.md)
+
+### Local CI Testing
+
+Test CI workflow locally before pushing:
+
+```bash
+# Build (simulates CI build)
+make build
+
+# Test basic functionality
+make test
+
+# Test custom paths
+mkdir -p /tmp/ci-test
+cp README.md /tmp/ci-test/
+make run-custom-all PATH=/tmp/ci-test
+
+# Verify outputs
+ls -lh output/pdf/
+```
+
 ## Contributing
 
 When modifying the pipeline:
