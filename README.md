@@ -1154,4 +1154,4 @@ For issues or questions:
 
 **Version**: 2.0.0 (Custom Path Support)  
 **Last Updated**: February 11, 2026  
-**Developed by**: [Cognic AI](https://www.cognicai.com)
+**Developed by**: [Cognic AI](https:/github.com/CognicAI)
