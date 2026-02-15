@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/CognicAI_logo.png" alt="Cognic AI Logo" width="800"/>
+  <img src="assets/CognicAI.png" alt="Cognic AI Logo" width="800"/>
   <p><em>Developed by Cognic AI</em></p>
 </div>
 

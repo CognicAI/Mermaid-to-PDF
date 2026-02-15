@@ -3,8 +3,14 @@
 main.py – Automated Mermaid-to-PDF pipeline.
 
 Usage:
+
     python scripts/main.py <input.md>           # Process a single markdown file
     python scripts/main.py <folder>             # Process all .md files in a folder
+
+    # Customise author, logo, or header text:
+    python scripts/main.py <input.md> --author "Jane Doe"
+    python scripts/main.py <input.md> --logo /path/to/logo.png
+    python scripts/main.py <input.md> --header-text "Project Report"
 
 Pipeline:
     1. Extract mermaid blocks → .mmd files          (extract_mermaid.py)
@@ -21,6 +27,9 @@ Project layout:
     └── *.md             Source markdown files
 """
 
+from __future__ import annotations
+
+import argparse
 import re
 import shutil
 import subprocess
@@ -70,7 +79,24 @@ def strip_emojis(text: str) -> str:
     return EMOJI_PATTERN.sub("", text)
 
 
-def run_pipeline(md_input: Path):
+# ── Defaults (used when CLI flags are omitted) ─────────────────────
+DEFAULT_AUTHOR = "Harsha Vardhanu Parnandi"
+DEFAULT_HEADER_TEXT = "Analysis Document"
+
+
+def _find_logo_in_assets() -> Path | None:
+    """Return the first image file found in assets/, or None."""
+    assets = PROJECT_ROOT / "assets"
+    if not assets.is_dir():
+        return None
+    for ext in ("*.png", "*.jpg", "*.jpeg", "*.svg"):
+        matches = sorted(assets.glob(ext))
+        if matches:
+            return matches[0]
+    return None
+
+
+def run_pipeline(md_input: Path, *, author: str, logo: Path | None, header_text: str):
     base_name = md_input.stem
     output_dir = PROJECT_ROOT / "output"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -145,31 +171,41 @@ def run_pipeline(md_input: Path):
     doc_title = title_match.group(1).strip() if title_match else base_name
     
     # Escape LaTeX special characters in title
-    doc_title_escaped = doc_title.replace('\\', '\\textbackslash{}') \
-                                  .replace('_', '\\_') \
+    # Use a placeholder for backslash first to prevent its braces from
+    # being double-escaped by the subsequent { and } replacements.
+    _BKSL = "\x00BKSL\x00"
+    doc_title_escaped = doc_title.replace('\\', _BKSL) \
                                   .replace('{', '\\{') \
                                   .replace('}', '\\}') \
+                                  .replace('_', '\\_') \
                                   .replace('&', '\\&') \
                                   .replace('%', '\\%') \
                                   .replace('$', '\\$') \
                                   .replace('#', '\\#') \
                                   .replace('^', '\\textasciicircum{}') \
-                                  .replace('~', '\\textasciitilde{}')
+                                  .replace('~', '\\textasciitilde{}') \
+                                  .replace(_BKSL, '\\textbackslash{}')
 
     # Generate a full-page title page with title, author, and date
     titlepage_file = temp_dir / "titlepage.tex"
-    logo_path = PROJECT_ROOT / "assets" / "CognicAI_logo.png"
+    logo_path = logo.resolve() if logo else None
+
+    logo_include = (
+        rf"\includegraphics[height=40pt]{{{logo_path}}}"
+        if logo_path
+        else ""
+    )
     titlepage_tex = rf"""
 \begin{{titlepage}}
 \centering
 
 \vspace*{{3cm}}
 
-{{\Huge\bfseries {doc_title_escaped}\par}}
+{{\fontsize{{30}}{{36}}\selectfont\bfseries {doc_title_escaped}\par}}
 
 \vspace{{1.5cm}}
 
-{{\Large Harsha Vardhanu Parnandi\par}}
+{{\Large {author}\par}}
 
 \vspace{{1cm}}
 
@@ -177,7 +213,7 @@ def run_pipeline(md_input: Path):
 
 \vfill
 
-\includegraphics[height=40pt]{{{logo_path}}}
+{logo_include}
 
 \vspace{{1cm}}
 \end{{titlepage}}
@@ -209,13 +245,17 @@ def run_pipeline(md_input: Path):
     # LaTeX preamble with GitHub-like styling
     preamble_path = PROJECT_ROOT / "styles" / "style-preamble.tex"
 
-    # Write a small tex file defining \logopath (absolute) so the preamble
-    # and titlepage can reference the logo regardless of xelatex's CWD.
+    # Write a small tex file defining \logopath (if available) and
+    # \headertext so the preamble can reference them regardless of CWD.
     paths_tex = temp_dir / "paths.tex"
-    paths_tex.write_text(
-        f"\\newcommand{{\\logopath}}{{{logo_path}}}\n",
-        encoding="utf-8",
-    )
+    paths_lines: list[str] = []
+    if logo_path:
+        paths_lines.append(f"\\newcommand{{\\logopath}}{{{logo_path}}}")
+        paths_lines.append("\\newcommand{\\haslogo}{1}")
+    else:
+        paths_lines.append("\\newcommand{\\logopath}{}")
+    paths_lines.append(f"\\newcommand{{\\headertext}}{{{header_text}}}")
+    paths_tex.write_text("\n".join(paths_lines) + "\n", encoding="utf-8")
 
     pandoc_cmd = [
         "pandoc",
@@ -225,9 +265,13 @@ def run_pipeline(md_input: Path):
         "--pdf-engine=xelatex",
         "-V", "mainfont=Barlow",
         "-V", "monofont=Fira Code",
+        "-V", "fontsize=12pt",
         "-V", "geometry:margin=0.75in",
-        "-M", "numbersections=false",
+        "--number-sections",
+        "--toc",
         "--toc-depth=3",
+        "--wrap=auto",
+        "--columns=85",
         "-H", str(paths_tex),
         "-H", str(preamble_path),
         "--resource-path", str(temp_dir),
@@ -254,16 +298,55 @@ def run_pipeline(md_input: Path):
     print(f"   PDF: {output_pdf}")
 
 
-def main():
-    if len(sys.argv) != 2:
-        print("Usage: python scripts/main.py <input.md|folder>")
-        sys.exit(1)
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    """Parse CLI arguments for the pipeline."""
+    parser = argparse.ArgumentParser(
+        description="Mermaid-to-PDF: convert Markdown with Mermaid diagrams into styled PDFs.",
+    )
+    parser.add_argument(
+        "input",
+        help="Path to a .md file or a folder of .md files",
+    )
+    parser.add_argument(
+        "--author",
+        default=DEFAULT_AUTHOR,
+        help=f"Author name shown on the title page (default: '{DEFAULT_AUTHOR}')",
+    )
+    parser.add_argument(
+        "--logo",
+        default=None,
+        help="Path to logo image (default: auto-detect first image in assets/)",
+    )
+    parser.add_argument(
+        "--header-text",
+        default=DEFAULT_HEADER_TEXT,
+        help=f"Text shown in the top-right page header (default: '{DEFAULT_HEADER_TEXT}')",
+    )
+    return parser.parse_args(argv)
 
-    input_path = Path(sys.argv[1]).resolve()
+
+def main():
+    args = parse_args()
+    input_path = Path(args.input).resolve()
 
     if not input_path.exists():
         print(f"Error: path not found: {input_path}")
         sys.exit(1)
+
+    # Resolve logo: explicit flag > auto-detect from assets/ > None (skip)
+    if args.logo is not None:
+        logo = Path(args.logo).resolve()
+        if not logo.exists():
+            print(f"Error: logo not found: {logo}")
+            sys.exit(1)
+    else:
+        logo = _find_logo_in_assets()
+        if logo:
+            print(f"   Auto-detected logo: {logo.name}")
+        else:
+            print("   No logo found in assets/ — generating PDF without logo.")
+
+    pipeline_kwargs = dict(author=args.author, logo=logo, header_text=args.header_text)
 
     # Handle folder input - process all .md files
     if input_path.is_dir():
@@ -277,7 +360,7 @@ def main():
             print(f"\n{'='*60}")
             print(f"Processing {i}/{len(md_files)}: {md_file.name}")
             print(f"{'='*60}")
-            run_pipeline(md_file)
+            run_pipeline(md_file, **pipeline_kwargs)
         
         print(f"\n✅ All {len(md_files)} file(s) processed successfully!")
     
@@ -286,7 +369,7 @@ def main():
         if input_path.suffix != ".md":
             print(f"Error: expected a .md file, got: {input_path.suffix}")
             sys.exit(1)
-        run_pipeline(input_path)
+        run_pipeline(input_path, **pipeline_kwargs)
     
     else:
         print(f"Error: invalid path: {input_path}")

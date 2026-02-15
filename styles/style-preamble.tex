@@ -8,20 +8,22 @@
 % ── Headers & Footers ─────────────────────────────────────
 \usepackage{fancyhdr}
 \usepackage{graphicx}
+\usepackage{ifthen}
 \setlength{\headheight}{36pt}   % Important when logo > 24pt
 \fancyhf{}
 \renewcommand{\headrulewidth}{0pt}
-% \logopath must be defined before this file is loaded (via a prior -H include)
-\fancyhead[L]{\includegraphics[height=32pt]{\logopath}}
-\fancyhead[R]{Architecture Document}
+% \logopath, \headertext (and optionally \haslogo) must be defined
+% before this file is loaded (via a prior -H include of paths.tex)
+\fancyhead[L]{\ifdefined\haslogo\includegraphics[height=32pt]{\logopath}\fi}
+\fancyhead[R]{\headertext}
 \fancyfoot[C]{\thepage}
 \pagestyle{fancy}
 % Apply same style to 'plain' pages (TOC, title transitions)
 \fancypagestyle{plain}{%
   \fancyhf{}
   \renewcommand{\headrulewidth}{0pt}
-  \fancyhead[L]{\includegraphics[height=32pt]{\logopath}}
-  \fancyhead[R]{Architecture Document}
+  \fancyhead[L]{\ifdefined\haslogo\includegraphics[height=32pt]{\logopath}\fi}
+  \fancyhead[R]{\headertext}
   \fancyfoot[C]{\thepage}
 }
 
@@ -40,20 +42,27 @@
   linkcolor=headingblue,
   urlcolor=linkblue,
   citecolor=headingblue,
+  bookmarks=true,
+  bookmarksnumbered=false,
+  bookmarksopen=true,
+  bookmarksopenlevel=2,
+  pdfstartview=Fit,
+  pdfpagemode=UseOutlines,
+  linktoc=all,
 }
 
-% ── Headings ──────────────────────────────────────────────────────────
+% ── Headings (sized for professional tech PDF readability) ────────────
 \usepackage{titlesec}
 \titleformat{\section}
-  {\LARGE\bfseries\color{headingblue}}{\thesection}{1em}{}[\vspace{2pt}\titlerule]
+  {\fontsize{21}{25}\selectfont\bfseries\color{headingblue}}{}{0em}{}[\vspace{2pt}\titlerule]
 \titleformat{\subsection}
-  {\Large\bfseries\color{headingblue}}{\thesubsection}{1em}{}
+  {\fontsize{17}{21}\selectfont\bfseries\color{headingblue}}{}{0em}{}
 \titleformat{\subsubsection}
-  {\large\bfseries\color{headingblue}}{\thesubsubsection}{1em}{}
+  {\fontsize{14.5}{18}\selectfont\bfseries\color{headingblue}}{}{0em}{}
 \titleformat{\paragraph}[block]
-  {\normalsize\bfseries\color{headingblue}}{\theparagraph}{0em}{}
+  {\fontsize{13}{16}\selectfont\bfseries\color{headingblue}}{}{0em}{}
 \titleformat{\subparagraph}[block]
-  {\normalsize\bfseries\color{headingblue}}{\thesubparagraph}{0em}{}
+  {\fontsize{12}{15}\selectfont\bfseries\color{headingblue}}{}{0em}{}
 
 % Spacing: {left}{before}{after}[right]
 \titlespacing*{\section}{0pt}{24pt plus 4pt minus 2pt}{12pt plus 2pt minus 2pt}
@@ -66,6 +75,37 @@
 % Override the Shaded environment that pandoc generates
 \usepackage{framed}
 \definecolor{shadecolor}{HTML}{f6f8fa}
+
+% Code blocks: 10.5pt mono with automatic line-wrapping within margins
+\usepackage{fvextra}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{fontsize=\fontsize{10.5}{13.5}\selectfont,breaklines=true,breakanywhere=true,commandchars=\\\{\}}
+
+% Make inline code breakable at hyphens and allow generous line-breaking
+\makeatletter
+\def\verbatim@font{\normalfont\ttfamily\hyphenchar\font=45\relax}
+\makeatother
+
+% Redefine \texttt (pandoc inline code) to allow line breaks at /
+% while correctly rendering LaTeX escapes (e.g. \{ → { , \} → } ).
+% The previous \nolinkurl approach broke at / but printed \{ literally.
+\let\OldTexttt\texttt
+\makeatletter
+% Internal loop: split at / and insert \allowbreak after each one
+\def\@texttt@breakloop#1/#2\@nil{%
+  #1%
+  \ifx\relax#2\relax\else
+    /\allowbreak
+    \@texttt@breakloop#2\@nil
+  \fi
+}
+\renewcommand{\texttt}[1]{%
+  \begingroup
+  \ttfamily
+  \tolerance=9999\hbadness=10000\emergencystretch=3em
+  \@texttt@breakloop#1/\@nil
+  \endgroup
+}
+\makeatother
 
 % ── Blockquotes ───────────────────────────────────────────────────────
 \usepackage{mdframed}
@@ -93,8 +133,40 @@
 \usepackage{booktabs}
 \usepackage{longtable}
 \usepackage{array}
-% Allow line breaks inside table cells for long content
 \usepackage{tabularx}
+
+% Table spacing — keep tabcolsep tight so proportional columns have room
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.5}
+
+% Wrapping column types
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+
+% Default longtable positioning
+\setlength\LTleft{0pt}
+\setlength\LTright{0pt}
+\setlength\LTpre{6pt}
+\setlength\LTpost{6pt}
+
+% Force pandoc longtables to use full page width and wrap cell content
+\usepackage{calc}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+% Set table font to 10pt, ensure full-width columns, and allow text wrapping
+\let\Oldlongtable\longtable
+\let\endOldlongtable\endlongtable
+\renewenvironment{longtable}{%
+  \fontsize{10}{13}\selectfont
+  \linewidth=\textwidth
+  \sloppy
+  \hbadness=10000
+  \emergencystretch=2em
+  \Oldlongtable
+}{\endOldlongtable}
+\makeatother
 
 % ── Images ────────────────────────────────────────────────────────────
 \usepackage{float}
@@ -104,7 +176,8 @@
 \usepackage{enumitem}
 \setlist{itemsep=2pt, parsep=2pt, topsep=4pt}
 
-% ── Misc ──────────────────────────────────────────────────────────────
+% ── Body line spacing & paragraph layout ─────────────────────────────
+\linespread{1.45}   % 1.45× line-height for body text readability
 \usepackage{parskip}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{10pt plus 3pt minus 2pt}
