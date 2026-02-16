@@ -25,8 +25,7 @@ def replace_mermaid_blocks_with_images(
         if idx is None:
             return match.group(0)  # no more images – leave block as-is
         img = image_paths[idx]
-        label = Path(img).stem.replace("_", " ").title()
-        return f"![{label}]({img})"
+        return f"![]({img})"
 
     return MERMAID_BLOCK_PATTERN.sub(_replacer, markdown_text)
 
