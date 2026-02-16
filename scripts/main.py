@@ -42,6 +42,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 from extract_mermaid import process_markdown_file
 from convert_mermaid import convert_all
 from replace_mermaid import process_file as replace_mermaid_in_file
+from remove_backticks import remove_inline_backticks
 
 # Matches most emoji unicode ranges
 EMOJI_PATTERN = re.compile(
@@ -145,6 +146,9 @@ def run_pipeline(md_input: Path, *, author: str, logo: Path | None, header_text:
 
     # Replace → with a LaTeX-safe arrow (Barlow font may lack this glyph)
     md_text = md_text.replace("→", "$\\rightarrow$")
+
+    # Remove inline code backticks (`) from the markdown
+    md_text = remove_inline_backticks(md_text)
 
     # Remove any existing \begin{titlepage}...\end{titlepage} from body
     titlepage_match = re.search(
