@@ -82,7 +82,6 @@ def strip_emojis(text: str) -> str:
 
 # ── Defaults (used when CLI flags are omitted) ─────────────────────
 DEFAULT_AUTHOR = "Harsha Vardhanu Parnandi"
-DEFAULT_HEADER_TEXT = "Analysis Document"
 
 
 def _find_logo_in_assets() -> Path | None:
@@ -323,8 +322,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--header-text",
-        default=DEFAULT_HEADER_TEXT,
-        help=f"Text shown in the top-right page header (default: '{DEFAULT_HEADER_TEXT}')",
+        default=None,
+        help="Text shown in the top-right page header (default: filename)",
     )
     return parser.parse_args(argv)
 
@@ -350,8 +349,6 @@ def main():
         else:
             print("   No logo found in assets/ — generating PDF without logo.")
 
-    pipeline_kwargs = dict(author=args.author, logo=logo, header_text=args.header_text)
-
     # Handle folder input - process all .md files
     if input_path.is_dir():
         md_files = sorted(input_path.glob("*.md"))
@@ -364,6 +361,9 @@ def main():
             print(f"\n{'='*60}")
             print(f"Processing {i}/{len(md_files)}: {md_file.name}")
             print(f"{'='*60}")
+            # Use filename as header if not specified, replacing underscores with spaces
+            header_text = args.header_text if args.header_text else md_file.stem.replace("_", " ")
+            pipeline_kwargs = dict(author=args.author, logo=logo, header_text=header_text)
             run_pipeline(md_file, **pipeline_kwargs)
         
         print(f"\n✅ All {len(md_files)} file(s) processed successfully!")
@@ -373,6 +373,9 @@ def main():
         if input_path.suffix != ".md":
             print(f"Error: expected a .md file, got: {input_path.suffix}")
             sys.exit(1)
+        # Use filename as header if not specified, replacing underscores with spaces
+        header_text = args.header_text if args.header_text else input_path.stem.replace("_", " ")
+        pipeline_kwargs = dict(author=args.author, logo=logo, header_text=header_text)
         run_pipeline(input_path, **pipeline_kwargs)
     
     else:
